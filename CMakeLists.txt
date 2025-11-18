@@ -5,9 +5,17 @@ project(ImageDisplay)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(OpenCV_DIR "C:/opencv/build/x64/vc16/lib")
+# Source files
+set(SOURCES
+    src/Main.cpp
+    src/FeatureExtractor.cpp
+    src/Matcher.cpp
+    src/Assembler.cpp
+)
 
-#Locate OpenCV
+# OpenCV
+set(OpenCV_DIR "C:/opencv")
+
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
