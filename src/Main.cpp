@@ -2,10 +2,13 @@
 #include <vector>
 #include <fstream>
 #include <cstdlib>
+#include <opencv2/opencv.hpp>
 
 #include "FeatureExtractor.h"
 #include "Matcher.h"
 #include "Assembler.h"
+#include "ImageIO/ImageLoader.h"
+#include "Pieces/PieceExtractor.h"
 
 using namespace std;
 using namespace cv;
@@ -32,13 +35,11 @@ unsigned char* readImageData(const string& imagePath, int width, int height) {
         inData[3 * i + 1] = Gbuf[i];
         inData[3 * i + 2] = Bbuf[i];
     }
-
-#include "ImageIO/ImageLoader.h"
-#include "Pieces/PieceExtractor.h"
+}
 
 int main() {
-    string path     = "../data_sample/starry_night_rotate.rgb";
-    string pathPNG  = "../data_sample/starry_night_rotate.png";
+    string pathRGB     = "./data_sample/starry_night_rotate.rgb";
+    string pathPNG  = "./data_sample/starry_night_rotate.png";
 
     // Load helper PNG
     Mat img = imread(pathPNG, IMREAD_COLOR);
@@ -57,8 +58,11 @@ int main() {
     if (!buffer) return -1;
 
     // Load raw .rgb
-    unsigned char* buffer = readImageData(path, width, height);
+    // buffer = readImageData(pathRGB, width, height);
     Mat rgbImage(height, width, CV_8UC3, buffer);
+
+    Mat bgrImage;
+    cvtColor(rgbImage, bgrImage, COLOR_RGB2BGR);
 
     // Convert & mask
     Mat gray;
@@ -71,7 +75,7 @@ int main() {
     vector<vector<Point>> contours;
     findContours(mask, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    Mat contourImage = rgbImage.clone();
+    Mat contourImage = bgrImage.clone();
     vector<Mat> pieces;
 
     for (const auto& c : contours) {
@@ -96,7 +100,7 @@ int main() {
         // Rotate
         Mat M = getRotationMatrix2D(box.center, angle, 1.0);
         Mat rotated;
-        warpAffine(rgbImage, rotated, M, rgbImage.size(), INTER_CUBIC, BORDER_CONSTANT, Scalar(0,0,0));
+        warpAffine(bgrImage, rotated, M, bgrImage.size(), INTER_CUBIC, BORDER_CONSTANT, Scalar(0,0,0));
 
         // ROI extraction
         Rect roi;
@@ -138,7 +142,7 @@ int main() {
         waitKey(0);
     };
 
-    showStage(rgbImage, "Stage 1: Original Image");
+    showStage(bgrImage, "Stage 1: Original Image");
 
     showStage(contourImage, "Stage 2: Detected Contours");
 

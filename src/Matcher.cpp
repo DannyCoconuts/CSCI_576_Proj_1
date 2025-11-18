@@ -100,21 +100,24 @@ Mat matEdgeGrad(const Mat& imgGray, int edge, int N)
     return grad;
 }
 
-double edgeDistanceFull(const PieceFeature& A, const PieceFeature& B)
+double edgeDistanceFull(const PieceFeature& A, const PieceFeature& B, int edgeA, int edgeB)
 {
     const int N = 40;
 
-    Mat Ahsv = matEdgeHSV(A.img, 1, N); // A right
-    Mat Bhsv = matEdgeHSV(B.img, 3, N); // B left
+    Mat Ahsv = matEdgeHSV(A.img, edgeA, N); // updated to any edge on A
+    Mat Bhsv = matEdgeHSV(B.img, edgeB, N); // updated to any edge on B
 
     Mat Agray, Bgray;
     cvtColor(A.img, Agray, COLOR_BGR2GRAY);
     cvtColor(B.img, Bgray, COLOR_BGR2GRAY);
 
-    Mat Agrad = matEdgeGrad(Agray, 1, N);
-    Mat Bgrad = matEdgeGrad(Bgray, 3, N);
+    Mat Agrad = matEdgeGrad(Agray, edgeA, N);
+    Mat Bgrad = matEdgeGrad(Bgray, edgeB, N);
 
-    double L = distLuma(A.right, B.left);
+    const EdgeFeature& efA = (edgeA == 0) ? A.top : (edgeA == 1) ? A.right : (edgeA == 2) ? A.bottom : A.left;
+    const EdgeFeature& efB = (edgeB == 0) ? B.top : (edgeB == 1) ? B.right : (edgeB == 2) ? B.bottom : B.left;
+
+    double L = distLuma(efA, efB);
     double C = distColor(Ahsv, Bhsv);
     double G = distGradient(Agrad, Bgrad);
 
@@ -139,12 +142,15 @@ vector<pair<int,double>> matchAll(const vector<PieceFeature>& f)
 
         for (int j = 0; j < N; j++) {
             if (i == j) continue;
+            for (int edgeA = 0; edgeA < 4; edgeA++) {
+                for (int edgeB = 0; edgeB < 4; edgeB++) {
+                    double d = edgeDistanceFull(f[i], f[j], edgeA, edgeB);
 
-            double d = edgeDistanceFull(f[i], f[j]);
-
-            if (d < best) {
-                best = d;
-                bestIdx = j;
+                    if (d < best) {
+                        best = d;
+                        bestIdx = j;
+                    }
+                }
             }
         }
 
