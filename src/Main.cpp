@@ -32,7 +32,7 @@ unsigned char* readImageData(const string& imagePath, int width, int height) {
         inData[3 * i + 1] = Gbuf[i];
         inData[3 * i + 2] = Bbuf[i];
     }
-
+}
 #include "ImageIO/ImageLoader.h"
 #include "Pieces/PieceExtractor.h"
 
@@ -51,7 +51,6 @@ int main() {
 
     int width  = img.cols;
     int height = img.rows;
-    std::cout << "Detecta123123sded ";
     // Load raw RGB
     unsigned char* buffer = ImageLoader::loadRawRGB(pathRGB, width, height);
     if (!buffer) return -1;

@@ -14,10 +14,10 @@ set(SOURCES
 )
 
 # OpenCV
-set(OpenCV_DIR "C:/opencv")
-
+set(OpenCV_DIR "C:/opencv/build/x64/vc16/lib")
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
+
 
 #Collect all .cpp files automatically
 file(GLOB_RECURSE SOURCES
