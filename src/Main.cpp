@@ -32,13 +32,16 @@ unsigned char* readImageData(const string& imagePath, int width, int height) {
         inData[3 * i + 1] = Gbuf[i];
         inData[3 * i + 2] = Bbuf[i];
     }
+
+    return inData;
 }
 #include "ImageIO/ImageLoader.h"
 #include "Pieces/PieceExtractor.h"
 
 int main() {
-    string path     = "../data_sample/starry_night_rotate.rgb";
-    string pathPNG  = "../data_sample/starry_night_rotate.png";
+    string pathRGB = "../data_sample/starry_night_rotate.rgb";
+    string pathPNG = "../data_sample/starry_night_rotate.png";
+
 
     // Load helper PNG
     Mat img = imread(pathPNG, IMREAD_COLOR);
@@ -54,9 +57,6 @@ int main() {
     // Load raw RGB
     unsigned char* buffer = ImageLoader::loadRawRGB(pathRGB, width, height);
     if (!buffer) return -1;
-
-    // Load raw .rgb
-    unsigned char* buffer = readImageData(path, width, height);
     Mat rgbImage(height, width, CV_8UC3, buffer);
 
     // Convert & mask
