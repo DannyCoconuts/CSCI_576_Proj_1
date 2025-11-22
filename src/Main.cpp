@@ -13,33 +13,12 @@
 using namespace std;
 using namespace cv;
 
-unsigned char* readImageData(const string& imagePath, int width, int height) {
-    ifstream inputFile(imagePath, ios::binary);
-    if (!inputFile.is_open()) {
-        cerr << "Error Opening File for Reading: " << imagePath << endl;
-        exit(1);
-    }
-
-    vector<char> Rbuf(width * height);
-    vector<char> Gbuf(width * height);
-    vector<char> Bbuf(width * height);
-
-    inputFile.read(Rbuf.data(), width * height);
-    inputFile.read(Gbuf.data(), width * height);
-    inputFile.read(Bbuf.data(), width * height);
-    inputFile.close();
-
-    unsigned char* inData = (unsigned char*)malloc(width * height * 3);
-    for (int i = 0; i < width * height; i++) {
-        inData[3 * i]     = Rbuf[i];
-        inData[3 * i + 1] = Gbuf[i];
-        inData[3 * i + 2] = Bbuf[i];
-    }
-}
 
 int main() {
-    string pathRGB     = "./data_sample/starry_night_rotate.rgb";
-    string pathPNG  = "./data_sample/starry_night_rotate.png";
+    string pathRGB     = "./data_sample/starry_night_translate.rgb";
+    string pathPNG  = "./data_sample/starry_night_translate.png";
+    // string pathRGB     = "./data_sample/starry_night_rotate.rgb";
+    // string pathPNG  = "./data_sample/starry_night_rotate.png";
 
     // Load helper PNG
     Mat img = imread(pathPNG, IMREAD_COLOR);
@@ -58,7 +37,6 @@ int main() {
     if (!buffer) return -1;
 
     // Load raw .rgb
-    // buffer = readImageData(pathRGB, width, height);
     Mat rgbImage(height, width, CV_8UC3, buffer);
 
     Mat bgrImage;
@@ -79,45 +57,60 @@ int main() {
     vector<Mat> pieces;
 
     for (const auto& c : contours) {
-        RotatedRect box = minAreaRect(c);
+        // RotatedRect box = minAreaRect(c);
+        Rect box = boundingRect(c);  // For non-rotated image
 
         // Draw box
-        Point2f ptsf[4];
-        box.points(ptsf);
-        vector<Point> poly;
-        for (int i = 0; i < 4; i++) {
-            poly.emplace_back(Point(cvRound(ptsf[i].x), cvRound(ptsf[i].y)));
-        }
-        polylines(contourImage, poly, true, Scalar(0,0,255), 2);
+        // Point2f ptsf[4];
+        // box.points(ptsf);
+        // vector<Point> poly;
+        // for (int i = 0; i < 4; i++) {
+        //     poly.emplace_back(Point(cvRound(ptsf[i].x), cvRound(ptsf[i].y)));
+        // }
+        // polylines(contourImage, poly, true, Scalar(0,0,255), 2);
 
-        float angle = box.angle;
-        Size2f boxSize = box.size;
-        if (box.angle < -45.0f) {
-            angle += 90.0f;
-            swap(boxSize.width, boxSize.height);
-        }
+        
+        rectangle(contourImage, box, Scalar(0,0,255), 2); // For non-rotated image
+
+        // float angle = box.angle;
+        // Size2f boxSize = box.size;
+        // if (box.angle < -45.0f) {
+        //     angle += 90.0f;
+        //     swap(boxSize.width, boxSize.height);
+        // }
 
         // Rotate
-        Mat M = getRotationMatrix2D(box.center, angle, 1.0);
-        Mat rotated;
-        warpAffine(bgrImage, rotated, M, bgrImage.size(), INTER_CUBIC, BORDER_CONSTANT, Scalar(0,0,0));
+        // Mat M = getRotationMatrix2D(box.center, angle, 1.0);
+        // Mat rotated;
+        // warpAffine(bgrImage, rotated, M, bgrImage.size(), INTER_CUBIC, BORDER_CONSTANT, Scalar(0,0,0));
 
-        // ROI extraction
-        Rect roi;
-        roi.width  = (int)boxSize.width;
-        roi.height = (int)boxSize.height;
-        roi.x = (int)(box.center.x - roi.width  / 2);
-        roi.y = (int)(box.center.y - roi.height / 2);
+        // // ROI extraction
+        // Rect roi;
+        // roi.width  = (int)boxSize.width;
+        // roi.height = (int)boxSize.height;
+        // roi.x = (int)(box.center.x - roi.width  / 2);
+        // roi.y = (int)(box.center.y - roi.height / 2);
 
-        roi.x = max(0, min(roi.x, rotated.cols - 1));
-        roi.y = max(0, min(roi.y, rotated.rows - 1));
-        if (roi.x + roi.width > rotated.cols)  roi.width  = rotated.cols - roi.x;
-        if (roi.y + roi.height > rotated.rows) roi.height = rotated.rows - roi.y;
+        // roi.x = max(0, min(roi.x, rotated.cols - 1));
+        // roi.y = max(0, min(roi.y, rotated.rows - 1));
+        // if (roi.x + roi.width > rotated.cols)  roi.width  = rotated.cols - roi.x;
+        // if (roi.y + roi.height > rotated.rows) roi.height = rotated.rows - roi.y;
 
-        if (roi.width > 0 && roi.height > 0) {
-            pieces.push_back(rotated(roi).clone());
+        // if (roi.width > 0 && roi.height > 0) {
+        //     pieces.push_back(rotated(roi).clone());
+        // }
+
+        // For non-rotated image
+        int x = max(0, min(box.x, bgrImage.cols - 1));
+        int y = max(0, min(box.y, bgrImage.rows - 1));
+        int w = min(box.width,  bgrImage.cols - x);
+        int h = min(box.height, bgrImage.rows - y);
+
+        if (w > 0 && h > 0) {
+            pieces.push_back(bgrImage(Rect(x, y, w, h)).clone());
         }
     }
+
 
     cout << "Detected " << pieces.size() << " pieces." << endl;
     cout << "Detected " << pieces.size() << " pieces." << endl;
@@ -168,52 +161,100 @@ int main() {
 
     showStage(preview, "Stage 3: Corrected Pieces");
 
+
+    // Testing accuracy of Matcher and building final image without animation currently
     vector<PieceFeature> features;
     for (auto& p : pieces) features.push_back(FeatureExtractor::extract(p));
 
-    vector<pair<int,double>> RL = Matcher::matchAll(features);
-    PuzzleLayout layout = Matcher::buildLayout(features.size());
-    vector<Point> targetPos = Assembler::computePiecePositions(layout, features, canvasW, canvasH);
+    vector<Pair> allMatches = Matcher::createFilteredMatches(features, 0.7);
 
-    vector<Point> startPos(features.size());
-    for (int i = 0; i < features.size(); i++) {
-        startPos[i] = Point(rand() % canvasW, rand() % canvasH);
+    cout << "Total matches found: " << allMatches.size() << endl;
+    if (!allMatches.empty()) {
+        cout << "Best match: piece " << allMatches[0].pieceA << " edge " << allMatches[0].edgeA 
+            << " <-> piece " << allMatches[0].pieceB << " edge " << allMatches[0].edgeB 
+            << " (score: " << allMatches[0].val << ")" << endl;
     }
 
-    canvas = Mat(canvasH, canvasW, CV_8UC3, Scalar(0,0,0));
-    putText(canvas, "Stage 4: Animation (auto play)",
-            Point(20, 40), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255,255,255), 2);
-    putText(canvas, "Press any key to start animation...",
-            Point(20, canvasH - 20), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(200,200,200), 2);
-    imshow("Puzzle Demo", canvas);
-    waitKey(0);
+    PuzzleLayout layout = Matcher::buildLayout(allMatches, features);
+ 
 
-    for (int frame = 0; frame < 60; frame++) {
-        float t = frame / 59.0f;
-        canvas = Mat(canvasH, canvasW, CV_8UC3, Scalar(0,0,0));
+    Mat finalAssembly(canvasH, canvasW, CV_8UC3, Scalar(0,0,0));
 
-        for (int i = 0; i < features.size(); i++) {
-            int x = startPos[i].x * (1 - t) + targetPos[i].x * t;
-            int y = startPos[i].y * (1 - t) + targetPos[i].y * t;
+    float minX = 0, minY = 0;
+    for (const auto& entry : layout.positions) {
+        minX = min(minX, entry.second.position.x);
+        minY = min(minY, entry.second.position.y);
+    }
 
-            const Mat& piece = features[i].img;
-            if (x >= 0 && y >= 0 &&
-                x + piece.cols <= canvasW &&
-                y + piece.rows <= canvasH)
-            {
-                piece.copyTo(canvas(Rect(x, y, piece.cols, piece.rows)));
-            }
+    for (auto& entry : layout.positions) {
+        int pieceId = entry.first;
+        const PiecePosition& pos = entry.second;
+        const Mat& piece = features[pieceId].img;
+        Mat pieceToDraw = Matcher::rotatePiece(piece, pos.rotation);
+
+        int screenX = static_cast<int>(pos.position.x - minX + 50);
+        int screenY = static_cast<int>(pos.position.y - minY + 50);
+
+        if (screenX >= 0 && screenY >= 0 &&
+            screenX + piece.cols <= img.cols &&
+            screenY + piece.rows <= img.rows) {
+            pieceToDraw.copyTo(finalAssembly(Rect(screenX, screenY, piece.cols, piece.rows)));
         }
 
-        putText(canvas, "Stage 4: Animation",
-                Point(20, 40), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255,255,255), 2);
-
-        imshow("Puzzle Demo", canvas);
-        waitKey(30);
+        putText(finalAssembly, to_string(pieceId), Point(screenX + 5, screenY + 20),
+                FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255,255,255), 1);
+        rectangle(finalAssembly, Point(screenX, screenY),
+                  Point(screenX + piece.cols, screenY + piece.rows), Scalar(0,255,0), 1);
     }
+    putText(finalAssembly, "Testing", 
+            Point(20, 40), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255,255,255), 2);
+    putText(finalAssembly, "Press any key to exit...", 
+            Point(20, canvasH - 20), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(200,200,200), 2);
 
-    Mat finalImage = Assembler::assembleImage(layout, features, canvasW, canvasH);
+    imshow("Testing", finalAssembly);
+    waitKey(0);
 
-    showStage(finalImage, "Final Result (Press any key to exit)");
+    // vector<Point> targetPos = Assembler::computePiecePositions(layout, features, canvasW, canvasH);
+
+    // vector<Point> startPos(features.size());
+    // for (int i = 0; i < features.size(); i++) {
+    //     startPos[i] = Point(rand() % canvasW, rand() % canvasH);
+    // }
+
+    // canvas = Mat(canvasH, canvasW, CV_8UC3, Scalar(0,0,0));
+    // putText(canvas, "Stage 4: Animation (auto play)",
+    //         Point(20, 40), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255,255,255), 2);
+    // putText(canvas, "Press any key to start animation...",
+    //         Point(20, canvasH - 20), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(200,200,200), 2);
+    // imshow("Puzzle Demo", canvas);
+    // waitKey(0);
+
+    // for (int frame = 0; frame < 60; frame++) {
+    //     float t = frame / 59.0f;
+    //     canvas = Mat(canvasH, canvasW, CV_8UC3, Scalar(0,0,0));
+
+    //     for (int i = 0; i < features.size(); i++) {
+    //         int x = startPos[i].x * (1 - t) + targetPos[i].x * t;
+    //         int y = startPos[i].y * (1 - t) + targetPos[i].y * t;
+
+    //         const Mat& piece = features[i].img;
+    //         if (x >= 0 && y >= 0 &&
+    //             x + piece.cols <= canvasW &&
+    //             y + piece.rows <= canvasH)
+    //         {
+    //             piece.copyTo(canvas(Rect(x, y, piece.cols, piece.rows)));
+    //         }
+    //     }
+
+    //     putText(canvas, "Stage 4: Animation",
+    //             Point(20, 40), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255,255,255), 2);
+
+    //     imshow("Puzzle Demo", canvas);
+    //     waitKey(30);
+    // }
+
+    // Mat finalImage = Assembler::assembleImage(layout, features, canvasW, canvasH);
+
+    // showStage(finalImage, "Final Result (Press any key to exit)");
     return 0;
 }
